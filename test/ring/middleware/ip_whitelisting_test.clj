@@ -70,9 +70,10 @@
 
 ;; Test middleware
 
+(def response {:status 200, :headers {} :body "Hi!"})
+
 (deftest ip-whitelisting-test
-  (let [response {:status 200, :headers {} :body "Hi!"}
-        handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelisting
                   (constantly response)
                   {:cidrs whitelist})]
     (are [success ip] (= (-> (mock/request :get "/")
@@ -99,8 +100,7 @@
                :body)))))
 
 (deftest ip-fn-test
-  (let [response {:status 200, :headers {} :body "Hi!"}
-        handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelisting
                   (constantly response)
                   {:cidrs whitelist
                    :ip-fn :x-forwarded-for})]
@@ -120,8 +120,7 @@
               :remote-addr "201.202.161.33"))))
 
 (deftest error-response-test
-  (let [response {:status 200 :headers {} :body "Hi!"}
-        handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelisting
                   (constantly response)
                   {:cidrs          whitelist
                    :error-response (constantly {:status 404 :headers {} :body "Not found"})})]
@@ -135,8 +134,7 @@
                    :status)))))
 
 (deftest allow-access?-test
-  (let [response {:status 200 :headers {} :body "Hi!"}
-        handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelisting
                   (constantly response)
                   {:cidrs         whitelist
                    :allow-access? (fn [request]
@@ -151,19 +149,17 @@
                    :status)))))
 
 (deftest cidr-validation
-  (let [response {:status 200 :headers {} :body "Hi!"}]
-    (is (thrown? AssertionError
-                 (ip/wrap-ip-whitelisting
-                   (constantly response)
-                   {})))
-    (is (thrown? AssertionError
-                 (ip/wrap-ip-whitelisting
-                   (constantly response)
-                   {:cidrs "100.200.100.200"})))))
+  (is (thrown? AssertionError
+               (ip/wrap-ip-whitelisting
+                 (constantly response)
+                 {})))
+  (is (thrown? AssertionError
+               (ip/wrap-ip-whitelisting
+                 (constantly response)
+                 {:cidrs "100.200.100.200"}))))
 
 (deftest updating-cidr-atom-test
-  (let [response {:status 200 :headers {} :body "Hi!"}
-        cidr-list (atom [])
+  (let [cidr-list (atom [])
         handler (ip/wrap-ip-whitelisting
                   (constantly response)
                   {:cidrs         cidr-list})]
