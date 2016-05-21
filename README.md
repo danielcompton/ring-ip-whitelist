@@ -1,12 +1,35 @@
-# ring-ip-whitelisting
+# Ring-IP-Whitelisting
 
-A Clojure library designed to ... well, that part is up to you.
+Ring middleware that allows you to protect routes with an IP whitelist.
+
+## Install
+
+Add the following dependency to your `project.clj`
+
+```
+[net.danielcompton/ring-ip-whitelisting "0.1.0"]
+```
 
 ## Usage
 
-(wrap-ip-whitelisting routes {:whitelist <atom-or-set> :error-fn ?? :auth-fn (fn [request result]) :ip-fn <>}
+
+```clj
+(ns my.cool-ns
+  (:require [ring.middleware.ip-whitelisting :as ip]))
+
+(def app
+  (-> handler
+      (ip/wrap-ip-whitelisting {:cidrs ["8.8.4.4" "210.50.2.0/30"})))
+```
+
+Show examples and explanations of all the parameters
+
 
 Talk about memory tradeoff, don't try and put in a /1 unless you want an OOM.
+Talk about safety of IP whitelisting
+
+Show how you can protect just some of your routes
+
 
 ## License
 
