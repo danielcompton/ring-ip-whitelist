@@ -4,7 +4,9 @@ A Clojure library designed to ... well, that part is up to you.
 
 ## Usage
 
-FIXME
+(wrap-ip-whitelisting routes {:whitelist <atom-or-set> :error-fn ?? :auth-fn (fn [request result]) :ip-fn <>}
+
+Talk about memory tradeoff, don't try and put in a /1 unless you want an OOM.
 
 ## License
 
