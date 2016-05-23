@@ -2,52 +2,38 @@
   (:require [clojure.test :refer :all]
             [ring.middleware.ip-whitelisting :as ip]
             [criterium.core :as bench]
-            [ring.mock.request :as mock])
-  (:import [org.apache.commons.net.util SubnetUtils$SubnetInfo SubnetUtils]))
+            [ring.mock.request :as mock]))
 
 ;; Utils
-
-(defn get-all-addresses [cidr]
-  (seq (..
-         (ip/cidr->subnet-util cidr)
-         getInfo
-         getAllAddresses)))
-
-(defn get-first-last [cidr]
-  ;; Type hint for Cursive.
-  (let [info ^SubnetUtils$SubnetInfo (..
-                                       (ip/cidr->subnet-util cidr)
-                                       getInfo)]
-    [(.getLowAddress info) (.getHighAddress info)]))
 
 (defn success? [req]
   (= 200 (:status req)))
 
 ;; Test internals
 
-(deftest cidr->subnet-util-test
-  (testing "all address in CIDR range"
-    (are [ips cidr] (= ips (get-all-addresses cidr))
-      ["127.0.0.1"] "127.0.0.1"
-      ["127.0.0.1"] "127.0.0.1/32"
-      ["127.0.0.0" "127.0.0.1"] "127.0.0.1/31"
-      ["100.55.7.32"] "100.55.7.32"))
+(deftest cidr-range-test
+  (are [start end cidr] (= [start end] (ip/cidr-range cidr))
+    1 1 "0.0.0.1/32"
+    0 63 "0.0.0.1/26"
+    0 63 "0.0.0.1/26"
+    0 63 "0.0.0.62/26"
+    2130706432 2130706433 "127.0.0.1/31"
+    256 256 "0.0.1.0/32"
+    1 1 "::1/128"
+    0 0 "::0/128"
+    0 79228162514264337593543950335 "::1/32"
+    256 256 "::ffff:0.0.1.0/128"
+    ))
 
-  (testing "first and last address in CIDR range"
-    (are [first last cidr] (= [first last] (get-first-last cidr))
-      "127.0.0.1" "127.0.0.1" "127.0.0.1"
-      "127.0.0.1" "127.0.0.1" "127.0.0.1/32"
-      "127.0.0.0" "127.0.0.31" "127.0.0.0/27"
-      "127.0.0.0" "127.0.0.31" "127.0.0.1/27"
-      "127.0.0.0" "127.0.0.31" "127.0.0.5/27")))
+(deftest normalise-cidr-test
+  (are [expected given] (= expected (ip/normalise-cidr given))
+    "::1/128" "::1"
+    "127.0.0.1/32" "127.0.0.1"
+    "210.11.25.12/24" "210.11.25.12/24"
+    "2001:0db8:85a3:0000:0000:8a2e:0370:7334/120" "2001:0db8:85a3:0000:0000:8a2e:0370:7334/120"))
 
-(deftest build-ip-whitelist-test
-  (are [set cidrs] (= set (ip/build-ip-set cidrs))
-    #{"127.0.0.1"} ["127.0.0.1"]
-    #{"127.0.0.1" "127.0.0.120" "127.0.0.121" "127.0.0.122" "127.0.0.123" "127.0.0.7"}
-    ["127.0.0.1/32" "127.0.0.1" "127.0.0.7" "127.0.0.121/30"]))
-
-(def whitelist ["201.202.161.33" "62.99.73.200/30" "177.10.156.0/21" "32.62.57.106/25"])
+(def whitelist ["201.202.161.33" "62.99.73.200/30" "177.10.156.0/21" "32.62.57.106/25"
+                "::ffff:0.0.1.0/128" "2001:0db8:85a3:0000:0000:8a2e:0370:7334/120" "::2/127"])
 
 (deftest in-whitelist-test
   (let [cidrs whitelist
@@ -64,7 +50,13 @@
       false "177.10.160.0"
       false "0.0.0.0"
       false "255.255.255.255"
-      false "300.300.300.300"
+      false "::0"
+      false "::1"
+      true "::2"
+      true "::3"
+      true "0.0.1.0"
+      true "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+      true "2001:0db8:85a3:0000:0000:8a2e:0370:7385"
       )))
 
 
@@ -92,7 +84,14 @@
       false "177.10.160.0"
       false "0.0.0.0"
       false "255.255.255.255"
-      false "300.300.300.300")
+      false "::0"
+      false "::1"
+      true "::2"
+      true "::3"
+      true "0.0.1.0"
+      true "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+      true "2001:0db8:85a3:0000:0000:8a2e:0370:7385"
+      )
     (is (= "<h1>Not authorized</h1>"
            (-> (mock/request :get "/")
                (assoc :remote-addr "0.0.0.0")
@@ -180,29 +179,29 @@
 
 ;; Benchmarks
 
-(defn benchmark []
-  (let [cidrs ["201.202.161.33" "62.99.73.200/30" "177.10.156.0/21" "32.62.57.106/25"]
-        ip-set (ip/build-ip-set cidrs)]
-    (bench/bench (ip/ip-in-ip-set? ip-set "177.10.160.0"))))
-;; 53 ns
-
-;; This is an alternate implementation where we loop over each subnet and check if the IP is in it.
-;; Roughly 20x slower. Trades off smaller space for slower execution.
-;; Not needed at the moment, may be useful in the future.
-
-(defn build-ip-subnet-set [cidrs]
-  (into #{} (map ip/cidr->subnet-util) cidrs))
-
-(defn in-subnet-whitelist [subnet-set ^String ip]
-  (reduce (fn [in-whitelist? ^SubnetUtils subnet]
-            (if (.isInRange (.getInfo subnet) ip)
-              (reduced true)
-              false))
-          false
-          subnet-set))
-
-(defn benchmark-2 []
-  (let [cidrs ["201.202.161.33" "62.99.73.200/30" "177.10.156.0/21" "32.62.57.106/25"]
-        ip-set (build-ip-subnet-set cidrs)]
-    (bench/bench (in-subnet-whitelist ip-set "177.10.160.0"))))
-;; 1100 ns
+;(defn benchmark []
+;  (let [cidrs ["201.202.161.33" "62.99.73.200/30" "177.10.156.0/21" "32.62.57.106/25"]
+;        ip-set (ip/build-ip-set cidrs)]
+;    (bench/bench (ip/ip-in-ip-set? ip-set "177.10.160.0"))))
+;;; 53 ns
+;
+;;; This is an alternate implementation where we loop over each subnet and check if the IP is in it.
+;;; Roughly 20x slower. Trades off smaller space for slower execution.
+;;; Not needed at the moment, may be useful in the future.
+;
+;(defn build-ip-subnet-set [cidrs]
+;  (into #{} (map ip/cidr->subnet-util) cidrs))
+;
+;(defn in-subnet-whitelist [subnet-set ^String ip]
+;  (reduce (fn [in-whitelist? ^SubnetUtils subnet]
+;            (if (.isInRange (.getInfo subnet) ip)
+;              (reduced true)
+;              false))
+;          false
+;          subnet-set))
+;
+;(defn benchmark-2 []
+;  (let [cidrs ["201.202.161.33" "62.99.73.200/30" "177.10.156.0/21" "32.62.57.106/25"]
+;        ip-set (build-ip-subnet-set cidrs)]
+;    (bench/bench (in-subnet-whitelist ip-set "177.10.160.0"))))
+;;; 1100 ns

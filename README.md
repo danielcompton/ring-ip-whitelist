@@ -19,7 +19,7 @@ Add the following dependency to your `project.clj`
 
 (def app
   (-> handler
-      (ip/wrap-ip-whitelisting {:cidrs ["8.8.4.4" "210.50.2.0/30"})))
+      (ip/wrap-ip-whitelisting {:cidrs ["8.8.4.4" "210.50.2.0/30" "::1/128"})))
 ```
 
 Show examples and explanations of all the parameters

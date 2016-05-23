@@ -1,34 +1,61 @@
 (ns ring.middleware.ip-whitelisting
-  (:import [org.apache.commons.net.util SubnetUtils]
-           [clojure.lang IAtom]))
+  (:refer-clojure :exclude [biginteger])
+  (:require [clojure.string :as str])
+  (:import [clojure.lang IAtom]
+           [java.net InetAddress]
+           [java.nio ByteBuffer]))
 
-;; TODO: IPv6 support? Could use http://docs.spring.io/spring-security/site/docs/3.1.x/apidocs/org/springframework/security/web/util/IpAddressMatcher.html
-;; https://issues.apache.org/jira/browse/NET-405
+(defn ^BigInteger inet->value
+  [^InetAddress inet-address]
+  (let [buffer (ByteBuffer/wrap (.getAddress inet-address))]
+    (BigInteger. 1 (.array buffer))))
 
-(defn ^SubnetUtils cidr->subnet-util
-  "Build a SubnetUtil from a cidr string. If there is no /<n> on the string
-   then it is treated as a /32 (matches one IP address)."
+(defn ip-value
+  "Returns the value of an IP (v4 or v6) address string"
+  [ip-address]
+  (inet->value (InetAddress/getByName ip-address)))
+
+(defn normalise-cidr [^String cidr-or-ip]
+  (let [])
+  (if (str/index-of cidr-or-ip "/") ;; If there is no slash in the cidr, treat it as a /32.
+    cidr-or-ip
+    (->> (.. (InetAddress/getByName cidr-or-ip) getAddress)
+         count ;; count number of bytes in address
+         (* 8) ;; * 8 to get address size
+         (str cidr-or-ip "/")))) ;; append address size to IP address to only match the single IP address
+
+(defn cidr-range
+  "Takes a cidr string and returns the start and end IP value in the range."
   [^String cidr]
-  (let [cidr (if (neg? (.indexOf cidr (int \/))) ;; If there is no slash in the cidr, treat it as a /32.
-               (str cidr "/32")
-               cidr)]
-    (doto
-      (SubnetUtils. cidr)
-      (.setInclusiveHostCount true))))
+  ;; Logic partially based on https://github.com/edazdarevic/CIDRUtils/blob/master/CIDRUtils.java
+  (let [index (.indexOf cidr "/")
+        _ (assert (pos? index) "CIDR must include /<n>")
+        [address network] (str/split cidr #"/" 2)
+        inet-address (InetAddress/getByName address)
+        prefix-length (Integer/parseInt network)
+        address-length (count (.getAddress inet-address)) ;; 4 (IPv4) or 16 (IPv6)
+        address-mask (.. (BigInteger. 1 (byte-array address-length (repeat address-length -1))) ;; Fill array with all bits set to 1
+                         not
+                         (shiftRight prefix-length))
+        ip-val (inet->value inet-address)
+        start-val (.and ip-val address-mask)
+        end-val (.add start-val (.not address-mask))]
+    [start-val end-val]))
 
 (defn build-ip-set
   "Returns a set which contains every IP address that is in the range of one of the CIDRs.
 
-  * cidrs: a sequence of cidr strings."
+  * cidrs: a sequence of cidr strings or IP addresses."
   [cidrs]
-  (persistent!
-    (reduce (fn [ip-set cidr]
-              (reduce conj! ip-set (.. (cidr->subnet-util cidr) getInfo getAllAddresses)))
-            (transient #{})
-            cidrs)))
+  (into #{}
+        (comp (map normalise-cidr)
+              (map cidr-range)
+              (mapcat (fn [[start end]]
+                        (range start (inc end)))))
+        cidrs))
 
 (defn ip-in-ip-set? [ip-set ip]
-  (contains? ip-set ip))
+  (contains? ip-set (ip-value ip)))
 
 (defn- access-denied [body]
   {:status  403
@@ -42,7 +69,8 @@
   IP whitelisting can provide additional security, but can be spoofed or otherwise defeated.
   It shouldn't be the only line of defense for sensitive resources.
 
-  * cidrs: a whitelist of CIDR strings or IP addresses. If the list is inside an atom
+  * cidrs: a whitelist of CIDR strings or IP addresses. IP addresses are treated as a CIDR for
+    the single address (e.g. a /32 for an IPv4 address). If the list is inside an atom
     then the whitelist will be updated when the atom changes.
   * ip-fn: function to extract the IP address.
   * error-response: Response to return if request is not authorised
