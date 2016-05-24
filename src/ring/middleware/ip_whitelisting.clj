@@ -72,7 +72,7 @@
   * cidrs: a whitelist of CIDR strings or IP addresses. IP addresses are treated as a CIDR for
     the single address (e.g. a /32 for an IPv4 address). If the list is inside an atom
     then the whitelist will be updated when the atom changes.
-  * ip-fn: function to extract the IP address.
+  * ip-fn: function to extract the IP address. Defaults to `:remote-addr`
   * error-response: Response to return if request is not authorised
   * allow-access?: An additional function that can be provided if IP whitelisting fails but
     more checking is needed before denying access. Takes a request argument, returns true if
