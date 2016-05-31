@@ -1,4 +1,4 @@
-(ns ring.middleware.ip-whitelisting
+(ns ring.middleware.ip-whitelist
   (:refer-clojure :exclude [biginteger])
   (:require [clojure.string :as str])
   (:import [clojure.lang IAtom]
@@ -17,7 +17,7 @@
 
 (defn normalise-cidr [^String cidr-or-ip]
   (let [])
-  (if (str/index-of cidr-or-ip "/") ;; If there is no slash in the cidr, treat it as a /32.
+  (if (str/index-of cidr-or-ip "/") ;; If there is no slash in the cidr, treat it as a CIDR for a single IP.
     cidr-or-ip
     (->> (.. (InetAddress/getByName cidr-or-ip) getAddress)
          count ;; count number of bytes in address
@@ -62,7 +62,7 @@
    :headers {"Content-Type" "text/html"}
    :body    body})
 
-(defn wrap-ip-whitelisting
+(defn wrap-ip-whitelist
   "Middleware that secures routes by IP whitelist. Checks the IP address of every request
   and denies access if requester is not in the whitelist.
 

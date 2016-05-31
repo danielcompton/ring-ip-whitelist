@@ -1,6 +1,6 @@
-(ns ring.middleware.ip-whitelisting-test
+(ns ring.middleware.ip-whitelist-test
   (:require [clojure.test :refer :all]
-            [ring.middleware.ip-whitelisting :as ip]
+            [ring.middleware.ip-whitelist :as ip]
             [criterium.core :as bench]
             [ring.mock.request :as mock]))
 
@@ -65,7 +65,7 @@
 (def response {:status 200, :headers {} :body "Hi!"})
 
 (deftest ip-whitelisting-test
-  (let [handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelist
                   (constantly response)
                   {:cidrs whitelist})]
     (are [success ip] (= (-> (mock/request :get "/")
@@ -99,7 +99,7 @@
                :body)))))
 
 (deftest ip-fn-test
-  (let [handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelist
                   (constantly response)
                   {:cidrs whitelist
                    :ip-fn :x-forwarded-for})]
@@ -119,7 +119,7 @@
               :remote-addr "201.202.161.33"))))
 
 (deftest error-response-test
-  (let [handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelist
                   (constantly response)
                   {:cidrs          whitelist
                    :error-response (constantly {:status 404 :headers {} :body "Not found"})})]
@@ -133,7 +133,7 @@
                    :status)))))
 
 (deftest allow-access?-test
-  (let [handler (ip/wrap-ip-whitelisting
+  (let [handler (ip/wrap-ip-whitelist
                   (constantly response)
                   {:cidrs         whitelist
                    :allow-access? (fn [request]
@@ -149,17 +149,17 @@
 
 (deftest cidr-validation
   (is (thrown? AssertionError
-               (ip/wrap-ip-whitelisting
+               (ip/wrap-ip-whitelist
                  (constantly response)
                  {})))
   (is (thrown? AssertionError
-               (ip/wrap-ip-whitelisting
+               (ip/wrap-ip-whitelist
                  (constantly response)
                  {:cidrs "100.200.100.200"}))))
 
 (deftest updating-cidr-atom-test
   (let [cidr-list (atom [])
-        handler (ip/wrap-ip-whitelisting
+        handler (ip/wrap-ip-whitelist
                   (constantly response)
                   {:cidrs         cidr-list})]
     (is (= 403 (-> (mock/request :get "/admin")

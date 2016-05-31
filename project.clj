@@ -1,6 +1,6 @@
-(defproject net.danielcompton/ring-ip-whitelisting "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+(defproject net.danielcompton/ring-ip-whitelist "0.1.0"
+  :description "Ring IP whitelisting middleware"
+  :url "http://github.com/danielcompton/ring-ip-whitelist"
   :license {:name "MIT License"
             :url "https://opensource.org/licenses/MIT"}
   :global-vars {*warn-on-reflection* true}
