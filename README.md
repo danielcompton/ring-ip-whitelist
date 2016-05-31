@@ -32,7 +32,7 @@ To IP whitelist routes, wrap them with `wrap-ip-whitelist`.
 
 CIDR ranges shouldn't be too large. The current implementation generates every IP address in the CIDR range. This is fine for a smallish number of IP addresses in the whitelist, and keeps the implementation simple and fast. The tradeoff is memory space. Don't use this to whitelist the whole world unless you want to run out of memory very shortly afterwards.
 
-#### :cidrs as an atom
+#### Passing `:cidrs` as an atom
 
 ```clj
 (def ip-whitelist (atom {"8.8.4.4"})
@@ -42,11 +42,11 @@ CIDR ranges shouldn't be too large. The current implementation generates every I
 (swap! ip-whitelist conj "100.121.5.33/30")
 ```
 
-#### :ip-fn
+#### ``:ip-fn`
 
 look at X-Forwarded-For headers
 
-#### error-response
+#### `:error-response`
 
 You may want to return either a customised 403 error page that matches your sites theme, or a 404 so you don't reveal that the user wasn't authorised to access a protected route. Either way, you can pass an error-response function to override the default.
 
@@ -58,7 +58,7 @@ You may want to return either a customised 403 error page that matches your site
                                             :body "<h1>Not found</h1>"}}))
 ```
 
-#### allow-access?
+#### `:allow-access?`
 
 Say you want to allow access from within your internal network to anyone, but outside users must be authenticated.
 
