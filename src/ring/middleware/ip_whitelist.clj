@@ -80,7 +80,7 @@
   [handler {:keys [cidrs ip-fn error-response allow-access?]
             :as   options
             :or   {ip-fn          :remote-addr
-                   error-response #(access-denied "<h1>Not authorized</h1>")
+                   error-response (fn [req] (access-denied "<h1>Not authorized</h1>"))
                    allow-access?  (constantly false)}}]
   (let [cidrs-atom? (instance? IAtom cidrs)
         dereffed-cidrs (if cidrs-atom? @cidrs cidrs)
@@ -94,4 +94,4 @@
       (if (or (ip-in-ip-set? @ip-whitelist (ip-fn request))
               (allow-access? request))
         (handler request)
-        (error-response)))))
+        (error-response request)))))
