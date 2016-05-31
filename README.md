@@ -81,10 +81,7 @@ While IP whitelisting increases the difficulty for an attacker, if an attacker c
 
 ## Protect some of your routes with IP whitelisting
 
-Show how you can protect just some of your routes before they are combined
-
-Show a filterer to apply after the routes are combined - does this route match me?
-
+TODO: Show how you can protect just some of your routes before they are combined
 
 ## License
 
