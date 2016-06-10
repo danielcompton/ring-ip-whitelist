@@ -1,4 +1,4 @@
-(defproject net.danielcompton/ring-ip-whitelist "0.1.0"
+(defproject net.danielcompton/ring-ip-whitelist "0.2.0-SNAPSHOT"
   :description "Ring IP whitelisting middleware"
   :url "http://github.com/danielcompton/ring-ip-whitelist"
   :license {:name "MIT License"
