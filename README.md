@@ -77,15 +77,17 @@ Use `:allow-access?` if you need to do additional checking before denying someon
 
 While IP whitelisting increases the difficulty for an attacker, if an attacker controls a router between a whitelisted IP and the server they can bypass your IP whitelisting. Also, if they can get onto the network of one of the whitelisted ranges then it is also game over. Treat IP whitelisting as an additional layer of security, not your only one. Some useful links to read more on IP whitelisting:
 
+
 * [How secure is IP address filtering?](http://stackoverflow.com/questions/437146/how-secure-is-ip-address-filtering)
 * [Is IP whitelist sufficient to protect a server?](http://security.stackexchange.com/questions/51587/is-ip-whitelist-sufficient-to-protect-a-server)
 * [The ugly truth about IP whitelisting](https://community.akamai.com/community/cloud-security/blog/2014/11/06/the-ugly-truth-behind-the-practice-of-ip-whitelisting)
 * [What security risks does IP spoofing bring?](http://security.stackexchange.com/questions/1009/what-security-risks-does-ip-spoofing-bring)
+* [Obscurity is a Valid Security Layer](https://danielmiessler.com/study/security-by-obscurity/)
 
 
 ## Protect some of your routes with IP whitelisting
 
-TODO: Show how you can protect just some of your routes before they are combined.
+TODO: Show how you can protect just some of your routes before they are combined.  
 TODO: Where to put this in your stack of middleware.
 
 ## License
