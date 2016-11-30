@@ -7,7 +7,7 @@ Ring middleware that allows you to protect routes with an IP whitelist.
 Add the following dependency to your `project.clj`
 
 ```
-[net.danielcompton/ring-ip-whitelist "0.1.0"]
+[net.danielcompton/ring-ip-whitelist "0.2.0"]
 ```
 
 ## Usage
