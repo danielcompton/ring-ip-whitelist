@@ -76,7 +76,9 @@
   * error-response: Response to return if request is not authorised
   * allow-access?: An additional function that can be provided if IP whitelisting fails but
     more checking is needed before denying access. Takes a request argument, returns true if
-    the request should be allowed, else false."
+    the request should be allowed, else false. Note, if you're checking for a secret request parameter
+    you probably shouldn't be, but if you still want to, make sure you do the comparison with a
+    constant time equals, e.g. https://github.com/weavejester/crypto-equality"
   [handler {:keys [cidrs ip-fn error-response allow-access?]
             :as   options
             :or   {ip-fn          :remote-addr
